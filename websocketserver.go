@@ -5,12 +5,17 @@ import (
 	"io"
 	"github.com/gorilla/websocket"
 	"fmt"
-	"os"
-	"bufio"
+	//"os"
+	//"bufio"
 	"unicode/utf8"
 )
 
 var upgrader = websocket.Upgrader{}
+type ConnectionUsers [] struct {
+	Username string
+	Conn *websocket.Conn
+}
+var Userlist ConnectionUsers
 
 func Handler(w http.ResponseWriter, req *http.Request) {
 	w.Header().Set("Access-Control-Allow-Origin","*")
@@ -32,7 +37,7 @@ func Handler(w http.ResponseWriter, req *http.Request) {
 	
 }
 
-func TakeMessage (w http.ResponseWriter, req *http.Request, conn *websocket.Conn) {
+func TakeMessage (w http.ResponseWriter, req *http.Request, conn *websocket.Conn, name string) {
 	for {
 		_, message, err := conn.ReadMessage()
 		if err != nil {
@@ -45,25 +50,40 @@ func TakeMessage (w http.ResponseWriter, req *http.Request, conn *websocket.Conn
 			k+=string(r)
 			message = message[size:]
 		}
-		
-		fmt.Println("-", k)
-	}
-}
-
-func SendMessage (w http.ResponseWriter, req *http.Request, conn *websocket.Conn) {
-	for {
-		reader := bufio.NewReader(os.Stdin)
-		message, _ := reader.ReadString('\n')
-		if message != "" {
-				if err := conn.WriteMessage(websocket.TextMessage, []byte(message)); err != nil {
-					fmt.Println(err)
+		var messagetoothers string
+		messagetoothers = name+" : "+k
+		for i:= range Userlist {
+			if Userlist[i].Conn != conn {
+				if err := Userlist[i].Conn.WriteMessage(websocket.TextMessage, []byte(messagetoothers)); err != nil {
+					fmt.Println("error here",err)
 					return
 				}
+				
 			}
-		message = ""
+		}
+		
+		
+		
+		
 	}
 }
 
+//func SendMessage (w http.ResponseWriter, req *http.Request, conn *websocket.Conn) {
+//	for {
+//		message:= "Proverka 123"
+//		if message != "" {
+//				for i:= range Userlist {
+//					if Userlist[i].Conn != conn {
+//						if err := Userlist[i].Conn.WriteMessage(websocket.TextMessage, []byte(message)); err != nil {
+//							fmt.Println("error here",err)
+//							return
+//						}
+//				
+//					}
+//				}
+//		}
+//	}
+//}
 
 func Socket(w http.ResponseWriter, req *http.Request) {
 	conn, err := upgrader.Upgrade(w, req, nil)
@@ -71,9 +91,27 @@ func Socket(w http.ResponseWriter, req *http.Request) {
 		fmt.Println(err)
 		return
 	}
+	_, message, err := conn.ReadMessage()
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	var name string
+	for len(message) > 0 {
+		r, size := utf8.DecodeRune(message)
+		name+=string(r)
+		message = message[size:]
+	}
 	
-	go TakeMessage (w, req, conn)	
-	go SendMessage (w,req, conn)
+	
+	var user struct {
+		Username string
+		Conn *websocket.Conn
+	}
+	user.Username = name 
+	user.Conn = conn
+	Userlist = append(Userlist,user)
+	go TakeMessage (w, req, conn, name)	
 	for {
 		
 	}

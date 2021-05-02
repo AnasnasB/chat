@@ -24,7 +24,7 @@ func TakeMessage (c *websocket.Conn) {
 			message = message[size:]
 		}
 		
-		fmt.Println("-", k)
+		fmt.Println(k)
 		
 	}
 	
@@ -50,7 +50,14 @@ func main() {
 		log.Fatal("dial:", err)
 	}
 	defer c.Close()
-
+	fmt.Println("Nickname:")
+	var name string 
+	reader := bufio.NewReader(os.Stdin)
+	name, _ = reader.ReadString('\n')
+	if err := c.WriteMessage(websocket.TextMessage, []byte(name)); err != nil {
+		fmt.Println(err)
+		return
+	}
 	go TakeMessage(c)
 	go SendMessage(c)
 	for {
