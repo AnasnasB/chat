@@ -42,6 +42,14 @@ func TakeMessage (w http.ResponseWriter, req *http.Request, conn *websocket.Conn
 		_, message, err := conn.ReadMessage()
 		if err != nil {
 			fmt.Println(err)
+			for i:= range Userlist {
+				if Userlist[i].Conn == conn {
+					copy(Userlist[i:], Userlist[i+1:])
+					Userlist[len(Userlist)-1].Username = ""
+					Userlist[len(Userlist)-1].Conn = nil
+					Userlist = Userlist[:len(Userlist)-1]
+				}
+			}
 			return
 		}
 		var k string
